@@ -212,7 +212,7 @@ def main():
         if flags:
             handleFlags(sys_def_path, flags, sys_name)
 
-    sys.stdout.writelines(lines)
+    sys.stdout.buffer.write(''.join(lines).encode('utf-8'))
 
 if __name__ == '__main__':
     main()
