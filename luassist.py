@@ -26,6 +26,7 @@ def findSysDefFile(path):
 def findRequireInsertPos(lines):
     pos = 0
     mode = 'INIT'
+    last_require_line = None
     for cursor, line in enumerate(lines):
         if mode == 'INIT':
             if line.startswith('--'):
@@ -33,6 +34,7 @@ def findRequireInsertPos(lines):
             elif re.match(r'^\s*local\s+M\s+=\s+{\s*}\s*$', line):
                 pos = cursor + 1
             elif re.match(r'^local\s+\w+\s*=\s*require\b.*$', line):
+                last_require_line = cursor
                 pos = cursor + 1
                 mode = 'HEAD_REQUIRE_FOUND'
             else:
@@ -41,12 +43,16 @@ def findRequireInsertPos(lines):
             if line.startswith('--'):
                 pos = cursor + 1
             elif re.match(r'^local\s+\w+\s*=\s*require\b.*$', line):
+                last_require_line = cursor
                 pos = cursor + 1
             else:
                 break
         else:
             raise Exception(f'unknown mode: {mode}')
-    return pos
+    if last_require_line != None:
+        return last_require_line + 1
+    else:
+        return pos
 
 def insertRequire(lines, sys_name):
     insert_pos = findRequireInsertPos(lines)
