@@ -16,7 +16,7 @@ def findConfigFile(path):
     return findConfigFile(path.parent)
 
 def findSysDefFile(path):
-    pf = path.joinpath(r'data\sys_def.lua')
+    pf = path.joinpath('data', 'sys_def.lua')
     if pf.is_file():
         return pf
     if path.parent == path:
@@ -58,13 +58,13 @@ def analyzeForRequires(src_path):
     src_dir = src_path.parent
     config_path = findConfigFile(src_dir)
 
-    proc = Popen(['luacheck', '-q', '--config', config_path, src_path], stdout=PIPE)
+    proc = Popen(['luacheck', '-q', '--no-color', '--config', config_path, src_path], stdout=PIPE)
     while True:
         line = proc.stdout.readline()
         if not line:
             break
 
-        m = re.match(r'^\s+[\w:\\\.]+:\d+:\d+:\s*(.*)$', line.decode('utf-8'))
+        m = re.match(r'^\s+[\w:/\\\._-]+:\d+:\d+:\s*(.*)$', line.decode('utf-8'))
         if m:
             msg = m.group(1)
             mm = re.match(r'accessing undefined variable \'(S[A-Z]\w+)\'', msg)
