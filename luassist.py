@@ -28,12 +28,14 @@ def findRequireInsertPos(lines):
     pos = 0
     mode = 'INIT'
     last_require_line = None
+    alt_insert_pos = None
     for cursor, line in enumerate(lines):
         if mode == 'INIT':
             if line.startswith('--'):
                 pos = cursor + 1
             elif re.match(r'^\s*local\s+M\s+=\s+{\s*}\s*$', line):
                 pos = cursor + 1
+                alt_insert_pos = pos
             elif re.match(r'^local\s+\w+\s*=\s*require\b.*$', line):
                 last_require_line = cursor
                 pos = cursor + 1
@@ -51,12 +53,20 @@ def findRequireInsertPos(lines):
         else:
             raise Exception(f'unknown mode: {mode}')
     if last_require_line != None:
-        return last_require_line + 1
+        return last_require_line + 1, False
+    elif alt_insert_pos != None:
+        return alt_insert_pos, True
     else:
-        return pos
+        return pos, False
 
 def insertRequire(lines, req_type, req_name):
-    insert_pos = findRequireInsertPos(lines)
+    insert_pos, need_sep_line = findRequireInsertPos(lines)
+
+    # 插入额外的分隔行
+    if need_sep_line:
+        lines.insert(insert_pos, f'\n')
+        insert_pos += 1
+
     if req_type == 'SYS':
         lines.insert(insert_pos, f'local {req_name} = require \'game.sys.{req_name}\'\n')
     elif req_type == 'GEN':
