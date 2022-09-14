@@ -4,6 +4,7 @@ import os
 import sys
 import argparse
 import re
+import functools
 from pathlib import Path
 from subprocess import Popen, PIPE
 
@@ -54,9 +55,16 @@ def findRequireInsertPos(lines):
     else:
         return pos
 
-def insertRequire(lines, sys_name):
+def insertRequire(lines, req_type, req_name):
     insert_pos = findRequireInsertPos(lines)
-    lines.insert(insert_pos, f'local {sys_name} = require \'game.sys.{sys_name}\'\n')
+    if req_type == 'SYS':
+        lines.insert(insert_pos, f'local {req_name} = require \'game.sys.{req_name}\'\n')
+    elif req_type == 'GEN':
+        # remove prefix 'Gen' and convert to lowercase separated by underscores
+        assert req_name.startswith('Gen')
+        req_path = req_name[3].lower() + req_name[4:]
+        req_path = ''.join(functools.reduce(lambda s,v: s.append(v.isupper() and '_' + v.lower() or v) or s, req_path, []))
+        lines.insert(insert_pos, f'local {req_name} = require \'gen.{req_path}\'\n')
 
 def analyzeForRequires(src_path):
     need_require = []
@@ -73,10 +81,16 @@ def analyzeForRequires(src_path):
         m = re.match(r'^\s+[\w:/\\\._-]+:\d+:\d+:\s*(.*)$', line.decode('utf-8'))
         if m:
             msg = m.group(1)
+
             mm = re.match(r'accessing undefined variable \'(S[A-Z]\w+)\'', msg)
             if mm:
                 sys_name = mm.group(1)
-                need_require.append(sys_name)
+                need_require.append(('SYS', sys_name))
+
+            mm = re.match(r'accessing undefined variable \'(Gen[A-Z]\w+)\'', msg)
+            if mm:
+                sys_name = mm.group(1)
+                need_require.append(('GEN', sys_name))
 
     return need_require
 
@@ -92,10 +106,10 @@ def analyzeForSysDef(lines):
 
 def handleRequires(lines, need_require):
     required = set()
-    for sys_name in need_require:
-        if sys_name in required: continue
-        required.add(sys_name)
-        insertRequire(lines, sys_name)
+    for req_type, req_name in need_require:
+        if req_name in required: continue
+        required.add(req_name)
+        insertRequire(lines, req_type, req_name)
 
 def handleFlags(sys_def_path, flags, sys_name):
     lines = []
