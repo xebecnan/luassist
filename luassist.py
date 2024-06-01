@@ -129,6 +129,7 @@ def handleFlags(sys_def_path, flags, sys_name):
             lines.append(line)
 
     cursor = 0
+    ready = False
     sys_awake_mode = 'INIT'
     sys_start_mode = 'INIT'
     update_mode = 'INIT'
@@ -136,6 +137,15 @@ def handleFlags(sys_def_path, flags, sys_name):
     dirty = False
     while cursor < len(lines):
         line = lines[cursor]
+
+        # search for 'init' section, skip 'meta_init' section
+        if not ready:
+            m = re.match(r'^\s*init\s*=\s*{\s*$', line)
+            if m:
+                ready = True
+            cursor += 1
+            continue
+
         if 'on_sys_awake' in flags:
             if sys_awake_mode == 'INIT' or sys_awake_mode == 'MATCHING':
                 m = re.match(r'^\s*{\s*\'(\w+)\'\s*,\s*\'on_sys_awake\'\s*}\s*,\s*$', line)
